@@ -2,6 +2,10 @@ from airflow.models import DAG, DagRun, TaskInstance, TaskFail, Log, XCom, SlaMi
 from airflow.jobs import BaseJob
 from airflow.models import settings
 from airflow.operators.python_operator import PythonOperator
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import (
+    Column, Integer, String, DateTime, Text, Boolean, ForeignKey, PickleType,
+    Index, Float, LargeBinary)
 from datetime import datetime, timedelta
 import os
 import logging
@@ -15,6 +19,40 @@ airflow trigger_dag --conf '{"maxDBEntryAgeInDays":30}' airflow-db-cleanup
     maxDBEntryAgeInDays:<INT> - Optional
 
 """
+
+Base = declarative_base()
+
+class Job(Base):
+    __tablename__ = "job"
+
+    id = Column(Integer, primary_key=True)
+    dag_id = Column(String(250))
+    state = Column(String(20))
+    job_type = Column(String(30))
+    start_date = Column(DateTime)
+    end_date = Column(DateTime)
+    latest_heartbeat = Column(DateTime)
+    executor_class = Column(String(500))
+    hostname = Column(String(500))
+    unixname = Column(String(1000))
+
+    def __repr__(self):
+        return str((
+            self.dag_id, self.hostname, self.start_date.isoformat()))
+
+class CeleryTaskMeta(Base):
+    __tablename__ = "celery_taskmeta"
+
+    id = Column(Integer, primary_key=True)
+    task_id_id = Column(String(155))
+    status = Column(String(50))
+    result = Column(LargeBinary)
+    date_done = Column(DateTime)
+    status = Column(Text)
+
+    def __repr__(self):
+        return str((
+            self.dag_id, self.task_id, self.execution_date.isoformat()))
 
 DAG_ID = os.path.basename(__file__).replace(".pyc", "").replace(".py", "")  # airflow-db-cleanup
 START_DATE = datetime(2018, 4, 15, 0, 0)
@@ -30,7 +68,8 @@ DATABASE_OBJECTS = [  # List of all the objects that will be deleted. Comment ou
     {"airflow_db_model": XCom, "age_check_column": XCom.execution_date},
     {"airflow_db_model": BaseJob, "age_check_column": BaseJob.latest_heartbeat},
     {"airflow_db_model": SlaMiss, "age_check_column": SlaMiss.execution_date},
-    # Should be nice to clean also job and celery_taskmeta, but they are not accessible through airflow.models
+    {"airflow_db_model": Job, "age_check_column": Job.latest_heartbeat},
+    {"airflow_db_model": CeleryTaskMeta, "age_check_column": CeleryTaskMeta.date_done},
 ]
 
 session = settings.Session()
