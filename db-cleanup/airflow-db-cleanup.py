@@ -48,11 +48,11 @@ class CeleryTaskMeta(Base):
     status = Column(String(50))
     result = Column(LargeBinary)
     date_done = Column(DateTime)
-    status = Column(Text)
+    traceback = Column(Text)
 
     def __repr__(self):
         return str((
-            self.dag_id, self.task_id, self.execution_date.isoformat()))
+            self.task_id, self.status, self.date_done.isoformat()))
 
 DAG_ID = os.path.basename(__file__).replace(".pyc", "").replace(".py", "")  # airflow-db-cleanup
 START_DATE = datetime(2018, 4, 15, 0, 0)
