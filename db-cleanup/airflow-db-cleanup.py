@@ -44,7 +44,7 @@ class CeleryTaskMeta(Base):
     __tablename__ = "celery_taskmeta"
 
     id = Column(Integer, primary_key=True)
-    task_id_id = Column(String(155))
+    task_id = Column(String(155))
     status = Column(String(50))
     result = Column(LargeBinary)
     date_done = Column(DateTime)
